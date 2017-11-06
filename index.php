@@ -25,61 +25,89 @@
     </script>
 </head>
 <body>
-    <div class="wrapper">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="page-header clearfix">
-                        <h2 class="pull-left">Category Details</h2>
-                        <!-- <a href="create.php" class="btn btn-success pull-right">Add New Category</a> -->
-                    </div>
-                    <?php
-                    // Include config file
-                    require_once 'config.php';
+    <?php
+      require_once 'config.php';
 
-                    // Attempt select query execution
-                    $sql = "SELECT * FROM categories";
-                    if($result = $mysqli->query($sql)){
-                        if($result->num_rows > 0){
-                            echo "<table class='table table-bordered table-striped'>";
-                                echo "<thead>";
-                                    echo "<tr>";
-                                        echo "<th>#</th>";
-                                        echo "<th>Name</th>";
-                                        echo "<th>Parent ID</th>";
-                                        echo "<th>Action</th>";
-                                    echo "</tr>";
-                                echo "</thead>";
-                                echo "<tbody>";
-                                while($row = $result->fetch_array()){
-                                    echo "<tr>";
-                                        echo "<td>" . $row['id'] . "</td>";
-                                        echo "<td>" . $row['name'] . "</td>";
-                                        echo "<td>" . $row['parent_id'] . "</td>";
-                                        echo "<td>";
-                                            echo "<a href='read.php?id=". $row['id'] ."' title='View Record' data-toggle='tooltip'><span class='glyphicon glyphicon-eye-open'></span></a>";
-                                            echo "<a href='update.php?id=". $row['id'] ."' title='Update Record' data-toggle='tooltip'><span class='glyphicon glyphicon-pencil'></span></a>";
-                                            echo "<a href='delete.php?id=". $row['id'] ."' title='Delete Record' data-toggle='tooltip'><span class='glyphicon glyphicon-trash'></span></a>";
-                                        echo "</td>";
-                                    echo "</tr>";
-                                }
-                                echo "</tbody>";
-                            echo "</table>";
-                            // Free result set
-                            $result->free();
-                        } else{
-                            echo "<p class='lead'><em>No records were found.</em></p>";
-                        }
-                    } else{
-                        echo "ERROR: Could not able to execute $sql. " . $mysqli->error;
-                    }
+      // Put all dates from this month into array
+      $dates=array();
+      $month = date("m");
+      $year = date("Y");
 
-                    // Close connection
-                    $mysqli->close();
-                    ?>
-                </div>
-            </div>
-        </div>
-    </div>
+      for($d=1; $d<=31; $d++) {
+        $time=mktime(12, 0, 0, $month, $d, $year);
+        if (date('m', $time)==$month) {
+          // $dates[]=date('Y-m-d-D', $time);
+          $dates[]=$time;
+        }
+      }
+
+      // Put all category names and IDs into array
+      $categories = array();
+      $category_q = "SELECT id, name FROM categories ORDER BY transaction_type_id, id";
+      if($category_data = $mysqli->query($category_q)) {
+        if($category_data->num_rows > 0) {
+          while($category = $category_data->fetch_array()) {
+            $categories[]=$category;
+          }
+        } else {
+          echo "No categories in database yet.";
+          return;
+        }
+      } else {
+        echo "ERROR: Something went wrong while grabbing categories from the database. " . $mysqli->error;
+        return;
+      }
+      $category_data->free();
+
+      // Put all entry data into array
+      $entries = array();
+      $entry_q = "SELECT * FROM entries";
+      if($entry_data = $mysqli->query($entry_q)) {
+        if($entry_data->num_rows > 0) {
+          while($entry = $entry_data->fetch_array()) {
+            $entries[]=$entry;
+          }
+        } else {
+          echo "No entries in database yet.";
+          return;
+        }
+      } else {
+        echo "ERROR: Something went wrong while grabbing entries from the database. " . $mysqli->error;
+        return;
+      }
+      $entry_data->free();
+
+      // Close MySQL connection
+      $mysqli->close();
+    ?>
+
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th></th>
+          <?php foreach ($dates as $date): ?>
+            <th><?=date('m/d', $date)?></th>
+          <?php endforeach; ?>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($categories as $category): ?>
+          <tr>
+            <td><b><?=$category['name']?></b></td>
+            <?php
+              foreach ($dates as $date) {
+                $amount = '0.00';
+                foreach ($entries as $entry) {
+                  if ($entry['transaction_date'] == date('Y-m-d', $date) && $entry['category_id'] == $category['id']) {
+                    $amount = $entry['amount'];
+                  }
+                }
+                echo '<td>$' . $amount . '</td>';
+              }
+            ?>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
 </body>
 </html>
