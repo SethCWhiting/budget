@@ -2,19 +2,18 @@
 require_once 'config.php';
 
 $yesterday = date('Y-m-d', time() - 60 * 60 * 24);
+$first_of_month = date('Y') . '-' . date('m') . '-01';
+$category_list = "'2', '6', '8', '9', '12', '14', '16'";
+$days_in_month = cal_days_in_month(CAL_GREGORIAN, date('m', strtotime($yesterday)), date('Y', strtotime($yesterday)));
 
 // Put all category names and IDs into array
 $entries = array();
-$first_of_month = date('Y') . '-' . date('m') . '-01';
-$category_list = "'2', '6', '8', '9', '12', '14', '16'";
 $entry_q = "SELECT
-              categories.name,
               entries.amount,
-              entries.transaction_date
+              entries.transaction_date,
+              entries.category_id
             FROM
               entries
-            JOIN categories ON
-              entries.category_id = categories.id
             WHERE
               entries.category_id IN (" . $category_list . ") &&
               entries.transaction_date >= " . $first_of_month;
@@ -24,16 +23,77 @@ if($entry_data = $mysqli->query($entry_q)) {
       $entries[]=$entry;
     }
   } else {
-    echo "No categories in database yet.";
+    echo "No entries in database yet.";
     return;
   }
 } else {
-  echo "ERROR: Something went wrong while grabbing categories from the database. " . $mysqli->error;
+  echo "ERROR: Something went wrong while grabbing entries from the database. " . $mysqli->error;
   return;
 }
 $entry_data->free();
+
+// Put all category names and IDs into array
+$targets = array();
+$target_q = "SELECT
+              categories.name AS 'name',
+              monthly_targets.amount,
+              monthly_targets.category_id
+            FROM
+              monthly_targets
+            JOIN categories ON
+              monthly_targets.category_id = categories.id
+            WHERE
+              monthly_targets.category_id IN (" . $category_list . ")";
+if($target_data = $mysqli->query($target_q)) {
+  if($target_data->num_rows > 0) {
+    while($target = $target_data->fetch_array()) {
+      $targets[]=$target;
+    }
+  } else {
+    echo "No targets in database yet.";
+    return;
+  }
+} else {
+  echo "ERROR: Something went wrong while grabbing targets from the database. " . $mysqli->error;
+  return;
+}
+$target_data->free();
+
+function yesterday($yesterday, $date) {
+  return $yesterday ? $date == $yesterday : true;
+}
+
+function sumEntries($entries, $category_id, $yesterday = null) {
+  $sum = 0;
+  foreach ($entries as $entry) {
+    if ($entry['category_id'] == $category_id && yesterday($yesterday, $entry['transaction_date'])) {
+      $sum += $entry['amount'];
+    }
+  }
+  return number_format($sum, 2);
+}
+
+function calculateDefecit($total, $target, $days_in_month, $yesterday) {
+  $targetToDate = ($target / $days_in_month) * date('d', strtotime($yesterday));
+  $defecit = $total - $targetToDate;
+  return $defecit > 0 ? $defecit : false;
+}
 ?>
 
-<pre>
-  <?php print_r($entries); ?>
-</pre>
+<?php if (count($targets)): ?>
+  <?php foreach ($targets as $target): ?>
+    <h3><?=$target['name']?>:</h3>
+    <p>
+      Your monthly target for <b><?=$target['name']?></b> is <b>$<?=$target['amount']?></b>.
+      You've spent <b>$<?=$total = sumEntries($entries, $target['category_id'])?></b> so far this month.
+      <?php if ($defecit = calculateDefecit($total, $target['amount'], $days_in_month, $yesterday)): ?>
+        This puts you <span style="color:red;">off track</span> by <b><?=$defecit?></b>.
+      <?php else: ?>
+        <span style="color:green;">You guys are on track for the month!</span>
+      <?php endif; ?>
+      You have <b>$<?=$target['amount'] - $total?></b> left in your budget.
+      This means you could spend <!-- amount --> each day for the rest of the month and still hit your target.
+      Yesterday, you spent <b>$<?=sumEntries($entries, $target['category_id'], $yesterday)?></b>.
+    </p>
+  <?php endforeach; ?>
+<?php endif; ?>
