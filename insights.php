@@ -92,7 +92,11 @@ function calculateDailyTarget($target, $total, $yesterday, $days_in_month) {
 }
 ?>
 
-<body style="max-width:640px;font-family:sans-serif;">
+<html>
+<head>
+  <title>Whiting Budget Insights</title>
+</head>
+<body style="max-width:640px;margin:auto;font-family:sans-serif;">
   <?php if (count($targets)): ?>
     <h3>Overview:</h3>
     <p>
@@ -106,6 +110,7 @@ function calculateDailyTarget($target, $total, $yesterday, $days_in_month) {
       You have <b>$<?=number_format(($targetsTotal - $total), 2, '.', '')?></b> left in your budget.
       This means you could spend <b>$<?=calculateDailyTarget($targetsTotal, $total, $yesterday, $days_in_month)?></b> each day for the rest of the month and still hit your target.
     </p>
+    <hr>
     <?php foreach ($targets as $target): ?>
       <h3><?=$target['name']?>:</h3>
       <p>
@@ -123,3 +128,4 @@ function calculateDailyTarget($target, $total, $yesterday, $days_in_month) {
     <?php endforeach; ?>
   <?php endif; ?>
 </body>
+</html>
