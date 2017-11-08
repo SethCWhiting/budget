@@ -59,41 +59,64 @@ if($target_data = $mysqli->query($target_q)) {
 }
 $target_data->free();
 
-function sumEntries($entries, $category_id) {
+function meetsCriteria($entry_cat, $category_id) {
+  return $category_id ? $entry_cat == $category_id : true;
+}
+
+function sumTargets($targets) {
+  $sum = 0;
+  foreach ($targets as $target) {
+    $sum += $target['amount'];
+  }
+  return number_format($sum, 2, '.', '');
+}
+
+function sumEntries($entries, $category_id = null) {
   $sum = 0;
   foreach ($entries as $entry) {
-    if ($entry['category_id'] == $category_id) {
+    if (meetsCriteria($entry['category_id'], $category_id)) {
       $sum += $entry['amount'];
     }
   }
-  return number_format($sum, 2);
+  return number_format($sum, 2, '.', '');
 }
 
-function calculateDefecit($total, $target, $days_in_month, $yesterday) {
+function calculateDefecit($total, $days_in_month, $yesterday, $target) {
   $targetToDate = ($target / $days_in_month) * date('d', strtotime($yesterday));
   $defecit = $total - $targetToDate;
-  return $defecit > 0 ? $defecit : false;
+  return $defecit > 0 ? number_format((($defecit / $targetToDate) *  100), 2, '.', '') : false;
 }
 
 function calculateDailyTarget($target, $total, $yesterday, $days_in_month) {
-  return number_format(($target - $total) / ($days_in_month - date('d', strtotime($yesterday))), 2);
+  return number_format(($target - $total) / ($days_in_month - date('d', strtotime($yesterday))), 2, '.', '');
 }
 ?>
 
 <body style="max-width:640px;font-family:sans-serif;">
   <?php if (count($targets)): ?>
     <h3>Overview:</h3>
+    <p>
+      Your total monthly budget is <b>$<?=$targetsTotal = sumTargets($targets)?></b>.
+      You've spent <b>$<?=$total = sumEntries($entries)?></b> so far this month.
+      <?php if ($defecit = calculateDefecit($total, $days_in_month, $yesterday, $targetsTotal)): ?>
+        This puts you <span style="color:red;">off track</span> by <b><?=$defecit?>%</b>.
+      <?php else: ?>
+        <span style="color:green;">You guys are on track for the month!</span>
+      <?php endif; ?>
+      You have <b>$<?=number_format(($targetsTotal - $total), 2, '.', '')?></b> left in your budget.
+      This means you could spend <b>$<?=calculateDailyTarget($targetsTotal, $total, $yesterday, $days_in_month)?></b> each day for the rest of the month and still hit your target.
+    </p>
     <?php foreach ($targets as $target): ?>
       <h3><?=$target['name']?>:</h3>
       <p>
         Your monthly target for <b><?=$target['name']?></b> is <b>$<?=$target['amount']?></b>.
         You've spent <b>$<?=$total = sumEntries($entries, $target['category_id'])?></b> so far this month.
-        <?php if ($defecit = calculateDefecit($total, $target['amount'], $days_in_month, $yesterday)): ?>
-          This puts you <span style="color:red;">off track</span> by <b>$<?=$defecit?></b>.
+        <?php if ($defecit = calculateDefecit($total, $days_in_month, $yesterday, $target['amount'])): ?>
+          This puts you <span style="color:red;">off track</span> by <b><?=$defecit?>%</b>.
         <?php else: ?>
           <span style="color:green;">You guys are on track for the month!</span>
         <?php endif; ?>
-        You have <b>$<?=$target['amount'] - $total?></b> left in your budget.
+        You have <b>$<?=number_format($target['amount'] - $total, 2, '.', '')?></b> left in your budget.
         This means you could spend <b>$<?=calculateDailyTarget($target['amount'], $total, $yesterday, $days_in_month)?></b> each day for the rest of the month and still hit your target.
       </p>
       <hr>
