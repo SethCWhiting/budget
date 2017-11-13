@@ -3,6 +3,7 @@
 require_once 'config.php';
 
 $yesterday = date('Y-m-d', time() - 60 * 60 * 24);
+$selected_date = isset($_GET['date']) ? $_GET['date'] : $yesterday;
 
 // Put all category names and IDs into array
 $categories = array();
@@ -21,6 +22,23 @@ if($category_data = $mysqli->query($category_q)) {
   return;
 }
 $category_data->free();
+
+// Put all entry data into array
+$entries = array();
+$entry_q = "SELECT * FROM entries WHERE transaction_date = '" . $selected_date . "'";
+if($entry_data = $mysqli->query($entry_q)) {
+  if($entry_data->num_rows > 0) {
+    while($entry = $entry_data->fetch_array()) {
+      $entries[]=$entry;
+    }
+  } else {
+    echo 'none';
+  }
+} else {
+  echo "ERROR: Something went wrong while grabbing entries from the database. " . $mysqli->error;
+  return;
+}
+$entry_data->free();
 
 // Processing form data when form is submitted
 if($_SERVER["REQUEST_METHOD"] == "POST"){
@@ -43,7 +61,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
         header("location: mail.php");
         exit();
     } else{
-        echo "ERROR: Could not able to execute query. " . mysqli_error($mysqli);
+        echo "ERROR: Could not execute query. " . mysqli_error($mysqli);
     }
     // Close connection
     $mysqli->close();
@@ -71,7 +89,6 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                     <div class="page-header">
                         <h2>Input Transactions</h2>
                     </div>
-                    <p>Please fill this form and submit to add employee record to the database.</p>
                     <form action="<?=htmlspecialchars($_SERVER["PHP_SELF"])?>" method="post">
                         <table class="table table-bordered table-striped">
                             <tbody>
@@ -80,19 +97,22 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                                         <label for="date">Date</label>
                                     </td>
                                     <td>
-                                        <input type="date" class="form-control" name="date" value="<?=$yesterday?>" />
+                                        <input type="date" class="form-control" name="date" value="<?=$selected_date?>" />
                                     </td>
                                 </tr>
-                                <?php foreach ($categories as $category): ?>
-                                    <tr>
-                                        <td>
-                                            <label for="<?=$category['id']?>"><?=$category['name']?></label>
-                                        </td>
-                                        <td>
-                                            <input type="text" class="form-control" name="<?=$category['id']?>" />
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
+                                <tr>
+                                    <td>
+                                        <select class="form-control" name="category" required>
+                                            <option value="">Choose One</option>
+                                            <?php foreach ($categories as $category): ?>
+                                                <option value="<?=$category['id']?>"><?=$category['name']?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" name="amount" required />
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                         <input type="submit" class="btn btn-primary" value="Submit">
@@ -100,6 +120,21 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                     </form>
                 </div>
             </div>
+            <?php if (count($entries)): ?>
+                <div class="row">
+                    <div class="col-md-12">
+                        <hr>
+                        <h3>Transactions from <?=$selected_date?></h3>
+                        <table class="table table-bordered table-striped">
+                            <?php foreach ($entries as $entry): ?>
+                                <tr>
+                                    <td>$<?=$entry['amount']?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </table>
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </body>
