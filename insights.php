@@ -7,30 +7,30 @@ $category_list = "'2', '6', '8', '9', '12', '14', '16'";
 $days_in_month = cal_days_in_month(CAL_GREGORIAN, date('m', strtotime($yesterday)), date('Y', strtotime($yesterday)));
 
 // Put all category names and IDs into array
-$entries = array();
-$entry_q = "SELECT
-              entries.amount,
-              entries.transaction_date,
-              entries.category_id
+$transactions = array();
+$transaction_q = "SELECT
+              transactions.amount,
+              transactions.transaction_date,
+              transactions.category_id
             FROM
-              entries
+              transactions
             WHERE
-              entries.category_id IN (" . $category_list . ") &&
-              entries.transaction_date >= " . $first_of_month;
-if($entry_data = $mysqli->query($entry_q)) {
-  if($entry_data->num_rows > 0) {
-    while($entry = $entry_data->fetch_array()) {
-      $entries[]=$entry;
+              transactions.category_id IN (" . $category_list . ") &&
+              transactions.transaction_date >= " . $first_of_month;
+if($transaction_data = $mysqli->query($transaction_q)) {
+  if($transaction_data->num_rows > 0) {
+    while($transaction = $transaction_data->fetch_array()) {
+      $transactions[]=$transaction;
     }
   } else {
-    echo "No entries in database yet.";
+    echo "No transactions in database yet.";
     return;
   }
 } else {
-  echo "ERROR: Something went wrong while grabbing entries from the database. " . $mysqli->error;
+  echo "ERROR: Something went wrong while grabbing transactions from the database. " . $mysqli->error;
   return;
 }
-$entry_data->free();
+$transaction_data->free();
 
 // Put all category names and IDs into array
 $targets = array();
@@ -59,8 +59,8 @@ if($target_data = $mysqli->query($target_q)) {
 }
 $target_data->free();
 
-function meetsCriteria($entry_cat, $category_id) {
-  return $category_id ? $entry_cat == $category_id : true;
+function meetsCriteria($transaction_cat, $category_id) {
+  return $category_id ? $transaction_cat == $category_id : true;
 }
 
 function sumTargets($targets) {
@@ -71,11 +71,11 @@ function sumTargets($targets) {
   return number_format($sum, 2, '.', '');
 }
 
-function sumEntries($entries, $category_id = null) {
+function sumTransactions($transactions, $category_id = null) {
   $sum = 0;
-  foreach ($entries as $entry) {
-    if (meetsCriteria($entry['category_id'], $category_id)) {
-      $sum += $entry['amount'];
+  foreach ($transactions as $transaction) {
+    if (meetsCriteria($transaction['category_id'], $category_id)) {
+      $sum += $transaction['amount'];
     }
   }
   return number_format($sum, 2, '.', '');
@@ -101,7 +101,7 @@ function calculateDailyTarget($target, $total, $yesterday, $days_in_month) {
     <h3>Overview:</h3>
     <p>
       Your total monthly budget is <b>$<?=$targetsTotal = sumTargets($targets)?></b>.
-      You've spent <b>$<?=$total = sumEntries($entries)?></b> so far this month.
+      You've spent <b>$<?=$total = sumTransactions($transactions)?></b> so far this month.
       <?php if ($defecit = calculateDefecit($total, $days_in_month, $yesterday, $targetsTotal)): ?>
         This puts you <span style="color:red;">off track</span> by <b><?=$defecit?>%</b>.
       <?php else: ?>
@@ -115,7 +115,7 @@ function calculateDailyTarget($target, $total, $yesterday, $days_in_month) {
       <h3><?=$target['name']?>:</h3>
       <p>
         Your monthly target for <b><?=$target['name']?></b> is <b>$<?=$target['amount']?></b>.
-        You've spent <b>$<?=$total = sumEntries($entries, $target['category_id'])?></b> so far this month.
+        You've spent <b>$<?=$total = sumTransactions($transactions, $target['category_id'])?></b> so far this month.
         <?php if ($defecit = calculateDefecit($total, $days_in_month, $yesterday, $target['amount'])): ?>
           This puts you <span style="color:red;">off track</span> by <b><?=$defecit?>%</b>.
         <?php else: ?>

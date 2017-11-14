@@ -59,23 +59,23 @@
       }
       $category_data->free();
 
-      // Put all entry data into array
-      $entries = array();
-      $entry_q = "SELECT * FROM entries";
-      if($entry_data = $mysqli->query($entry_q)) {
-        if($entry_data->num_rows > 0) {
-          while($entry = $entry_data->fetch_array()) {
-            $entries[]=$entry;
+      // Put all transaction data into array
+      $transactions = array();
+      $transaction_q = "SELECT * FROM transactions";
+      if($transaction_data = $mysqli->query($transaction_q)) {
+        if($transaction_data->num_rows > 0) {
+          while($transaction = $transaction_data->fetch_array()) {
+            $transactions[]=$transaction;
           }
         } else {
-          echo "No entries in database yet.";
+          echo "No transactions in database yet.";
           return;
         }
       } else {
-        echo "ERROR: Something went wrong while grabbing entries from the database. " . $mysqli->error;
+        echo "ERROR: Something went wrong while grabbing transactions from the database. " . $mysqli->error;
         return;
       }
-      $entry_data->free();
+      $transaction_data->free();
 
       // Close MySQL connection
       $mysqli->close();
@@ -97,9 +97,9 @@
             <?php
               foreach ($dates as $date) {
                 $amount = '0.00';
-                foreach ($entries as $entry) {
-                  if ($entry['transaction_date'] == date('Y-m-d', $date) && $entry['category_id'] == $category['id']) {
-                    $amount = $entry['amount'];
+                foreach ($transactions as $transaction) {
+                  if ($transaction['transaction_date'] == date('Y-m-d', $date) && $transaction['category_id'] == $category['id']) {
+                    $amount = $transaction['amount'];
                   }
                 }
                 echo '<td>$' . $amount . '</td>';

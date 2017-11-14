@@ -23,30 +23,30 @@ if($category_data = $mysqli->query($category_q)) {
 }
 $category_data->free();
 
-// Put all entry data into array
-$entries = array();
-$entry_q = "SELECT
+// Put all transaction data into array
+$transactions = array();
+$transaction_q = "SELECT
               categories.name AS 'name',
-              entries.amount
+              transactions.amount
               FROM
-                entries
+                transactions
               JOIN
                 categories
               ON
-                entries.category_id = categories.id
+                transactions.category_id = categories.id
               WHERE
-                entries.transaction_date = '" . $selected_date . "'";
-if($entry_data = $mysqli->query($entry_q)) {
-  if($entry_data->num_rows > 0) {
-    while($entry = $entry_data->fetch_array()) {
-      $entries[]=$entry;
+                transactions.transaction_date = '" . $selected_date . "'";
+if($transaction_data = $mysqli->query($transaction_q)) {
+  if($transaction_data->num_rows > 0) {
+    while($transaction = $transaction_data->fetch_array()) {
+      $transactions[]=$transaction;
     }
   }
 } else {
-  echo "ERROR: Something went wrong while grabbing entries from the database. " . $mysqli->error;
+  echo "ERROR: Something went wrong while grabbing transactions from the database. " . $mysqli->error;
   return;
 }
-$entry_data->free();
+$transaction_data->free();
 ?>
 
 <!DOCTYPE html>
@@ -103,16 +103,16 @@ $entry_data->free();
                     </form>
                 </div>
             </div>
-            <?php if (count($entries)): ?>
+            <?php if (count($transactions)): ?>
                 <div class="row">
                     <div class="col-md-12">
                         <hr>
                         <h3>Transactions from <?=$selected_date?></h3>
                         <table class="table table-bordered table-striped">
-                            <?php foreach ($entries as $entry): ?>
+                            <?php foreach ($transactions as $transaction): ?>
                                 <tr>
-                                    <td><?=$entry['name']?></td>
-                                    <td>$<?=$entry['amount']?></td>
+                                    <td><?=$transaction['name']?></td>
+                                    <td>$<?=$transaction['amount']?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </table>

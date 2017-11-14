@@ -7,7 +7,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     $val= '(' . $_POST['category'] . ', ' . $_POST['amount'] . ', "' . $date . '")';
 
     // Prepare an insert statement
-    $sql = "INSERT INTO entries (category_id, amount, transaction_date) VALUES " . $val;
+    $sql = "INSERT INTO transactions (category_id, amount, transaction_date) VALUES " . $val;
 
     if(mysqli_query($mysqli, $sql)){
         header("location: /?date=" . $date);
