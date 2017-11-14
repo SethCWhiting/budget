@@ -25,47 +25,28 @@ $category_data->free();
 
 // Put all entry data into array
 $entries = array();
-$entry_q = "SELECT * FROM entries WHERE transaction_date = '" . $selected_date . "'";
+$entry_q = "SELECT
+              categories.name AS 'name',
+              entries.amount
+              FROM
+                entries
+              JOIN
+                categories
+              ON
+                entries.category_id = categories.id
+              WHERE
+                entries.transaction_date = '" . $selected_date . "'";
 if($entry_data = $mysqli->query($entry_q)) {
   if($entry_data->num_rows > 0) {
     while($entry = $entry_data->fetch_array()) {
       $entries[]=$entry;
     }
-  } else {
-    echo 'none';
   }
 } else {
   echo "ERROR: Something went wrong while grabbing entries from the database. " . $mysqli->error;
   return;
 }
 $entry_data->free();
-
-// Processing form data when form is submitted
-if($_SERVER["REQUEST_METHOD"] == "POST"){
-
-    $vals = array();
-    $date = date('Y-m-d', strtotime($_POST['date']));
-    foreach ($categories as $category) {
-      $id = $category['id'];
-      if ($_POST[$id]) {
-        $vals[]= '(' . $id . ', ' . $_POST[$id] . ', "' . $date . '")';
-      }
-    }
-    $vals = implode($vals, ', ');
-    // echo $vals;
-
-    // Prepare an insert statement
-    $sql = "INSERT INTO entries (category_id, amount, transaction_date) VALUES " . $vals;
-
-    if(mysqli_query($mysqli, $sql)){
-        header("location: mail.php");
-        exit();
-    } else{
-        echo "ERROR: Could not execute query. " . mysqli_error($mysqli);
-    }
-    // Close connection
-    $mysqli->close();
-}
 ?>
 
 <!DOCTYPE html>
@@ -89,7 +70,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                     <div class="page-header">
                         <h2>Input Transactions</h2>
                     </div>
-                    <form action="<?=htmlspecialchars($_SERVER["PHP_SELF"])?>" method="post">
+                    <form action="post.php" method="post">
                         <table class="table table-bordered table-striped">
                             <tbody>
                                 <tr>
@@ -103,7 +84,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                                 <tr>
                                     <td>
                                         <select class="form-control" name="category" required>
-                                            <option value="">Choose One</option>
+                                            <option value="">Choose Category</option>
                                             <?php foreach ($categories as $category): ?>
                                                 <option value="<?=$category['id']?>"><?=$category['name']?></option>
                                             <?php endforeach; ?>
@@ -115,8 +96,10 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                                 </tr>
                             </tbody>
                         </table>
-                        <input type="submit" class="btn btn-primary" value="Submit">
-                        <a href="table.php" class="btn btn-default">Cancel</a>
+                        <input type="submit" class="btn btn-primary" value="Submit Transaction">
+                        <?php if ($selected_date == $yesterday): ?>
+                            <a href="mail.php" class="btn btn-default">Mail Insights</a>
+                        <?php endif; ?>
                     </form>
                 </div>
             </div>
@@ -128,6 +111,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                         <table class="table table-bordered table-striped">
                             <?php foreach ($entries as $entry): ?>
                                 <tr>
+                                    <td><?=$entry['name']?></td>
                                     <td>$<?=$entry['amount']?></td>
                                 </tr>
                             <?php endforeach; ?>
